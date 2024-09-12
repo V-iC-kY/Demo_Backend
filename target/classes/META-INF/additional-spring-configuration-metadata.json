@@ -1,0 +1,12 @@
+{"properties": [
+  {
+    "name": "spring.mail.subject",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.mail.subject'"
+  },
+  {
+    "name": "app.firebase-configuration-file",
+    "type": "java.lang.String",
+    "description": "A description for 'app.firebase-configuration-file'"
+  }
+]}
