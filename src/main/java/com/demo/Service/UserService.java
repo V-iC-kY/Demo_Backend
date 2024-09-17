@@ -43,23 +43,25 @@ public class UserService {
 
 //	========================================================================================================================
 
-	public Map<String, Object> create(UserModel model)
+	public Map<String, Object> create(UserModel model, FCMmodel fcmModel)
 			throws NotFoundException, NoSuchAlgorithmException, IOException, FirebaseMessagingException {
 
-		UserModel userDetails = userRepoapi.findByEmailAndPhoneNumber(model.getEmail(), model.getPhoneNumber());
+		UserModel userDetails = userRepoapi.findByEmail(model.getEmail());
 
 		if (userDetails == null) {
 
 			String number = "1234567890";
 			String otp = "";
 			SecureRandom random = new SecureRandom();
-			char[] random_otp = new char[5];
+			char[] random_otp = new char[4];
 
 			for (int i = 0; i < 4; i++) {
 				random_otp[i] = number.charAt(random.nextInt(number.length()));
 
 				otp = otp + random_otp[i];
 			}
+
+			System.out.println(otp);
 
 			java.security.MessageDigest digest = java.security.MessageDigest.getInstance("sha256");
 
@@ -71,20 +73,25 @@ public class UserService {
 			}
 			model.setOtp(otp);
 
-			userRepoapi.save(model);
+			UserModel getId = userRepoapi.save(model);
 
-			String userEmails = model.getEmail();
+			fcmServiceapi.saveToken(getId.getId(), fcmModel.getFcmtoken());
+
+			String userEmails = getId.getEmail();
 			UserModel users1 = userRepoapi.findByEmail(userEmails);
 
-//			emailService.sendOtpMail(model);
+			emailService.sendOtpMail(getId);
 
-			String token = jwtTokenapi.generateToken(model);
+			jwtTokenapi.generateToken(getId);
 
-			if (users1 != null && users1.getEmail().equals(model.getEmail())) {
-//				TokenModel tokenList = tokenRepoapi.findByUserId(users1.getId());
-//				if (tokenList != null) {
-//				fcmServiceapi.sendNotification(tokenApi);
-//				}
+			if (users1 != null && users1.getEmail().equals(getId.getEmail())) {
+				FCMmodel fcmToken = FCMTokenRepoapi.findByUserId(users1.getId());
+
+				if (fcmToken != null) {
+					PushNotificationRequest req = new PushNotificationRequest("OTP-Login", "your OTP is- " + otp,
+							fcmToken.getFcmtoken());
+					fcmServiceapi.sendNotification(req);
+				}
 
 				model.setOtp(buffer.toString());
 
@@ -92,18 +99,22 @@ public class UserService {
 
 				userRepoapi.save(userDetails);
 
+				TokenModel token = tokenRepoapi.findByUserId(userDetails.getId());
+
 				Map<String, Object> returnUser = new HashMap<>();
 
-				returnUser.put("id :", model.getId());
+				returnUser.put("id ", model.getId());
 				returnUser.put("Name", model.getName());
 				returnUser.put("Email", model.getEmail());
-				returnUser.put("PhoneNumber :", model.getPhoneNumber());
-				returnUser.put("Token :", token);
+				returnUser.put("PhoneNumber ", model.getPhoneNumber());
+				returnUser.put("Token ", token.getToken());
 
 				return returnUser;
 			}
 
-		} else {
+		} else
+
+		{
 
 			if (userDetails.getEmail() != null && userDetails.getEmail().equals(model.getEmail())) {
 				throw new NotFoundException("Email Already Exists!");
@@ -119,25 +130,50 @@ public class UserService {
 
 //	========================================================================================================================
 
+	public UserModel saveName(UserModel model) throws NotFoundException {
+
+		UserModel userWithVjId = userRepoapi.findByVjId(model.getVjId());
+		if (userWithVjId != null) {
+			throw new NotFoundException("ID already in use.");
+		}
+
+		UserModel emailUser = userRepoapi.findByEmail(model.getEmail());
+		if (emailUser == null) {
+			throw new NotFoundException("User not found by email.");
+		}
+
+		if (emailUser.getVjId() == null) {
+			emailUser.setVjId(model.getVjId());
+			UserModel updatedUser = userRepoapi.save(emailUser);
+			return updatedUser;
+		} else {
+			throw new NotFoundException("User already has a vjId assigned.");
+		}
+	}
+
+//	========================================================================================================================
+
 	public Map<String, Object> login(UserModel model, FCMmodel fcmModel)
 			throws NotFoundException, NoSuchAlgorithmException, IOException {
 
-		UserModel userDetails = userRepoapi.findByEmailAndPhoneNumber(model.getEmail(), model.getPhoneNumber());
+//		UserModel userDetails = userRepoapi.findByEmailAndPhoneNumber(model.getEmail(), model.getPhoneNumber());
+
+		UserModel userDetails = userRepoapi.findByEmail(model.getEmail());
 
 		if (userDetails != null) {
-			
-			System.out.println("service"+fcmModel.getFcmtoken());
-			
+
 			fcmServiceapi.saveToken(userDetails.getId(), fcmModel.getFcmtoken());
 
 			String number = "1234567890";
 			String otp = "";
 			Random random = new Random();
-			char[] arr = new char[5];
-			for (int i = 0; i < 5; i++) {
+			char[] arr = new char[4];
+			for (int i = 0; i < 4; i++) {
 				arr[i] = number.charAt(random.nextInt(number.length()));
 				otp = otp + arr[i];
 			}
+
+			System.out.println(otp);
 
 			java.security.MessageDigest digest = java.security.MessageDigest.getInstance("sha256");
 			byte[] array = digest.digest(otp.getBytes());
@@ -149,19 +185,18 @@ public class UserService {
 
 			userDetails.setOtp(otp);
 
-			userRepoapi.save(userDetails);
+			UserModel getId = userRepoapi.save(userDetails);
 
-			String enteredEmail = model.getEmail();
-			String storedEmail = userDetails.getEmail();
-			String enteredPhoneNumber = model.getPhoneNumber();
-			String storedPhoneNumber = userDetails.getPhoneNumber();
+			fcmServiceapi.saveToken(getId.getId(), fcmModel.getFcmtoken());
 
-			if (enteredEmail.equals(storedEmail) && (enteredPhoneNumber.equals(storedPhoneNumber))) {
-				userRepoapi.save(userDetails);
-				UserModel users = userRepoapi.findByPhoneNumber(model.getPhoneNumber());
-				emailService.sendOtpMail(users);
+			String userEmails = getId.getEmail();
+			UserModel users1 = userRepoapi.findByEmail(userEmails);
 
-				FCMmodel fcmToken = FCMTokenRepoapi.findByUserId(users.getId());
+			emailService.sendOtpMail(getId);
+
+			if (users1 != null && users1.getEmail().equals(getId.getEmail())) {
+
+				FCMmodel fcmToken = FCMTokenRepoapi.findByUserId(users1.getId());
 
 				if (fcmToken != null) {
 					PushNotificationRequest req = new PushNotificationRequest("OTP-Login", "your OTP is- " + otp,
@@ -171,22 +206,16 @@ public class UserService {
 
 				userDetails.setOtp(buffer.toString());
 				userRepoapi.save(userDetails);
-				TokenModel token = tokenRepoapi.findByUserId(userDetails.getId());
-
+				TokenModel token = tokenRepoapi.findByUserId(users1.getId());
+				System.out.println(token);
 				Map<String, Object> returnUser = new HashMap<>();
-				returnUser.put("token", token.getToken());
-				returnUser.put("id", userDetails.getId());
-				returnUser.put("email", userDetails.getEmail());
-				returnUser.put("password", userDetails.getPassword());
-				returnUser.put("name", userDetails.getName());
-				returnUser.put("phoneNumber", userDetails.getPhoneNumber());
+				returnUser.put("id ", getId.getId());
+				returnUser.put("Email", getId.getEmail());
+				returnUser.put("Token ", token.getToken());
 
 				return returnUser;
 
 			}
-		} else {
-
-			throw new NotFoundException("Email Or PhoneNumber Not Found !");
 		}
 		throw new NotFoundException("Registration Failed !");
 

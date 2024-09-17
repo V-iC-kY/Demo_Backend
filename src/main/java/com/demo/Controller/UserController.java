@@ -34,14 +34,29 @@ public class UserController {
 
 	@CrossOrigin("*")
 	@PostMapping("/create")
-	public Map<String, Object> Create(@RequestBody UserModel model)
+	public Map<String, Object> Create(@RequestBody LoginRequestModel loginRequest)
 			throws NotFoundException, NoSuchAlgorithmException, IOException, FirebaseMessagingException {
 		try {
-			return userServiceapi.create(model);
+			UserModel userModel1 = loginRequest.getUserModel();
+			FCMmodel fcmModel1 = loginRequest.getFcmModel();
+			return userServiceapi.create(userModel1, fcmModel1);
 
 		} catch (NotFoundException e) {
 			throw new NotFoundException(e.getMessage());
 		}
+	}
+
+//	========================================================================================================================
+
+	@CrossOrigin("*")
+	@PostMapping("/generateName")
+	public UserModel createName(@RequestBody UserModel model) throws NotFoundException {
+		try {
+			return userServiceapi.saveName(model);
+		} catch (NotFoundException e) {
+			throw new NotFoundException(e.getMessage());
+		}
+
 	}
 
 //	========================================================================================================================
@@ -54,7 +69,6 @@ public class UserController {
 		try {
 			UserModel userModel = loginRequest.getUserModel();
 			FCMmodel fcmModel = loginRequest.getFcmModel();
-			System.out.println("Controller - FCM Token: " + fcmModel.getFcmtoken());
 
 			if (userServiceapi == null) {
 				throw new IllegalStateException("UserService is not initialized");
@@ -62,13 +76,10 @@ public class UserController {
 
 			return userServiceapi.login(userModel, fcmModel);
 		} catch (NotFoundException e) {
-			System.err.println("Error: " + e.getMessage());
 			throw new NotFoundException("Error: " + e.getMessage());
 		} catch (NoSuchAlgorithmException e) {
-			System.err.println("Error: " + e.getMessage());
 			throw new NoSuchAlgorithmException("Error: " + e.getMessage());
 		} catch (IOException e) {
-			System.err.println("Error: " + e.getMessage());
 			throw new IOException("Error: " + e.getMessage());
 		}
 	}

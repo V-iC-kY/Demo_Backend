@@ -19,24 +19,21 @@ public class FCMService {
 	@Autowired
 	private FirebaseMessaging firebaseMessaging;
 
-//	private String webtoken = "dArpZtJ9biygC8nQ0OyxbK:APA91bES2_PGcsvEPDqT25bNcBsvH2P1Nu9axP766Uv-9xfjcEkPMfe40kXrhPgNwop3gMJnsqgt3MZ_Avi7Mn7zAZBeVTl7TiZl7y4TZbjQMrl9racLc7OaOgbDWEJj99t75HVT82rn";
-
 	// ========================================================================================================================
 
 	public void saveToken(int userId, String token) throws NotFoundException {
-		System.out.println("fcmpage"+token);
 
 		FCMmodel existingToken = fCMTokenRepoapi.findByUserId(userId);
 
-		if (existingToken != null) {
-			String fcmtoken = existingToken.getFcmtoken();
-			existingToken.setFcmtoken(fcmtoken);
-			fCMTokenRepoapi.save(existingToken);
-		} else {
+		if (existingToken == null) {
+
 			FCMmodel fcMmodel = new FCMmodel();
 			fcMmodel.setUserId(userId);
 			fcMmodel.setFcmtoken(token);
 			fCMTokenRepoapi.save(fcMmodel);
+		} else {
+			existingToken.setFcmtoken(token);
+			fCMTokenRepoapi.save(existingToken);
 		}
 	}
 

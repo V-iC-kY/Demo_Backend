@@ -31,6 +31,9 @@ public class UserModel {
 	@Column
 	private String otp;
 
+	@Column
+	private String vjId;
+
 	public int getId() {
 		return id;
 	}
@@ -53,6 +56,14 @@ public class UserModel {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getVjId() {
+		return vjId;
+	}
+
+	public void setVjId(String vjId) {
+		this.vjId = vjId;
 	}
 
 	public String getPassword() {
